@@ -12,33 +12,58 @@ const ORIENTATION_FACTORS = {
 };
 
 /**
- * Vypočítá data solární energie na 7 dní
+ * Vypočítá data solární energie
  * @param {number} area - Plocha panelu v m²
  * @param {number} efficiency - Účinnost (0-1)
  * @param {string} orientation - Orientace střechy (south, east, west, north, atd.)
- * @param {Array<number>} sunHoursPerDay - Pole slunečních hodin pro každý den (volitelné)
+ * @param {Array} forecastData - Pole objektů z API s {dayLabel, sunHours} nebo null pro simulaci
  * @returns {Array} Pole objektů s daty pro každý den
  */
-export function simulateSolarData(area, efficiency, orientation = 'south', sunHoursPerDay = null) {
-  // Pokud nejsou poskytnuty sluneční hodiny, použijeme default simulaci
-  const defaultSunHours = [5, 6, 7, 6, 5, 4, 3];
-  const sunHours = sunHoursPerDay || defaultSunHours;
-
+export function simulateSolarData(area, efficiency, orientation = 'south', forecastData = null) {
   // Koeficient orientace
   const orientationFactor = ORIENTATION_FACTORS[orientation] || 1.0;
 
-  // Názvy dnů
-  const days = ['Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota', 'Neděle'];
+  // Pokud máme reálná data z API, použijeme je
+  if (forecastData && Array.isArray(forecastData) && forecastData.length > 0) {
+    return forecastData.map((dayData) => {
+      const energy = area * efficiency * dayData.sunHours * orientationFactor * 1000;
 
-  return days.map((day, index) => {
-    // Vzorec: energie = plocha_panelu * účinnost * sluneční_hodiny * orientace * 1000
-    const sunHoursForDay = sunHours[index] || sunHours[0];
-    const energy = area * efficiency * sunHoursForDay * orientationFactor * 1000;
+      return {
+        day: dayData.dayLabel,
+        sunHours: Math.round(dayData.sunHours * 10) / 10,
+        energy: Math.round(energy),
+        orientation,
+        orientationFactor,
+      };
+    });
+  }
+
+  // Fallback simulace (pokud API selže) - 5 dní
+  const defaultSunHours = [5, 6, 7, 6, 5];
+  const today = new Date();
+
+  return defaultSunHours.map((sunHours, index) => {
+    const date = new Date(today);
+    date.setDate(date.getDate() + index);
+
+    let dayLabel;
+    const dayOfWeek = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'][date.getDay()];
+    const dayMonth = `${date.getDate()}.${date.getMonth() + 1}.`;
+
+    if (index === 0) {
+      dayLabel = `Dnes ${dayMonth}`;
+    } else if (index === 1) {
+      dayLabel = `Zítra ${dayMonth}`;
+    } else {
+      dayLabel = `${dayOfWeek} ${dayMonth}`;
+    }
+
+    const energy = area * efficiency * sunHours * orientationFactor * 1000;
 
     return {
-      day,
-      sunHours: Math.round(sunHoursForDay * 10) / 10, // Zaokrouhlíme na 1 des. místo
-      energy: Math.round(energy), // Zaokrouhlíme na celé číslo Wh
+      day: dayLabel,
+      sunHours: Math.round(sunHours * 10) / 10,
+      energy: Math.round(energy),
       orientation,
       orientationFactor,
     };

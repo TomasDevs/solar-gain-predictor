@@ -50,7 +50,7 @@ function SolarChart({ data }) {
       },
       title: {
         display: true,
-        text: 'Predikce solární energie na 7 dní',
+        text: 'Predikce solární energie na 5 dní',
         font: {
           size: 16,
         },

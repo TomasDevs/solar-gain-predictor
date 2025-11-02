@@ -150,44 +150,62 @@ export function calculateSunHours(weatherData) {
 }
 
 /**
- * Vytvoří 7denní predikci slunečních hodin z předpovědi počasí
+ * Vytvoří 5denní predikci slunečních hodin z předpovědi počasí
  * @param {Object} forecastData - Data z forecast API
- * @returns {Array<number>} Pole slunečních hodin pro 7 dní
+ * @returns {Array<Object>} Pole objektů s daty pro každý den {date, dayLabel, sunHours}
  */
 export function extractSunHoursFromForecast(forecastData) {
-  const dailySunHours = [];
-
-  // Forecast API vrací data po 3 hodinách, potřebujeme seskupit podle dnů
   const dailyData = {};
 
+  // Forecast API vrací data po 3 hodinách, potřebujeme seskupit podle dnů
   forecastData.list.forEach(item => {
-    const date = new Date(item.dt * 1000).toLocaleDateString('cs-CZ');
+    const date = new Date(item.dt * 1000);
+    const dateKey = date.toLocaleDateString('cs-CZ');
 
-    if (!dailyData[date]) {
-      dailyData[date] = [];
+    if (!dailyData[dateKey]) {
+      dailyData[dateKey] = {
+        date: date,
+        items: []
+      };
     }
 
-    dailyData[date].push(item);
+    dailyData[dateKey].items.push(item);
   });
 
-  // Vypočítáme průměrné sluneční hodiny pro každý den
-  Object.values(dailyData).slice(0, 7).forEach(dayData => {
-    const avgCloudiness = dayData.reduce((sum, item) => sum + (item.clouds?.all || 0), 0) / dayData.length;
+  // Zpracujeme pouze prvních 5 dní (OpenWeatherMap free tier limit)
+  const result = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    const now = new Date();
-    const month = now.getMonth();
+  Object.entries(dailyData).slice(0, 5).forEach(([, dayData], index) => {
+    const date = dayData.date;
+    const avgCloudiness = dayData.items.reduce((sum, item) => sum + (item.clouds?.all || 0), 0) / dayData.items.length;
+
+    const month = date.getMonth();
     const avgSunHoursByMonth = [2, 3, 4, 6, 7, 8, 8, 7, 5, 4, 2, 2];
     const baseSunHours = avgSunHoursByMonth[month];
 
     const sunHours = baseSunHours * (1 - avgCloudiness / 100) + (avgCloudiness / 100) * 1;
-    dailySunHours.push(Math.max(1, Math.min(12, sunHours)));
+
+    // Vytvoříme popisek dne
+    let dayLabel;
+    const dayOfWeek = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'][date.getDay()];
+    const dayMonth = `${date.getDate()}.${date.getMonth() + 1}.`;
+
+    if (index === 0) {
+      dayLabel = `Dnes (${dayMonth})`;
+    } else if (index === 1) {
+      dayLabel = `Zítra (${dayMonth})`;
+    } else {
+      dayLabel = `${dayOfWeek} ${dayMonth}`;
+    }
+
+    result.push({
+      date: date,
+      dayLabel: dayLabel,
+      sunHours: Math.max(1, Math.min(12, sunHours))
+    });
   });
 
-  // Pokud nemáme 7 dní, doplníme průměrem
-  while (dailySunHours.length < 7) {
-    const avg = dailySunHours.reduce((a, b) => a + b, 0) / dailySunHours.length || 5;
-    dailySunHours.push(avg);
-  }
-
-  return dailySunHours.slice(0, 7);
+  return result;
 }
