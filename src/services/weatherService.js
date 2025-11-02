@@ -180,6 +180,7 @@ export function extractSunHoursFromForecast(forecastData) {
   Object.entries(dailyData).slice(0, 5).forEach(([, dayData], index) => {
     const date = dayData.date;
     const avgCloudiness = dayData.items.reduce((sum, item) => sum + (item.clouds?.all || 0), 0) / dayData.items.length;
+    const avgTemperature = dayData.items.reduce((sum, item) => sum + (item.main?.temp || 10), 0) / dayData.items.length;
 
     const month = date.getMonth();
     const avgSunHoursByMonth = [2, 3, 4, 6, 7, 8, 8, 7, 5, 4, 2, 2];
@@ -203,7 +204,9 @@ export function extractSunHoursFromForecast(forecastData) {
     result.push({
       date: date,
       dayLabel: dayLabel,
-      sunHours: Math.max(1, Math.min(12, sunHours))
+      sunHours: Math.max(1, Math.min(12, sunHours)),
+      cloudiness: avgCloudiness,
+      temperature: avgTemperature
     });
   });
 
