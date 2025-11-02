@@ -2,10 +2,10 @@ const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 /**
- * Získá aktuální počasí pro zadané souřadnice
- * @param {number} lat - Zeměpisná šířka
- * @param {number} lon - Zeměpisná délka
- * @returns {Promise<Object>} Data o počasí
+ * Gets current weather for given coordinates
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @returns {Promise<Object>} Weather data
  */
 export async function getCurrentWeather(lat, lon) {
   try {
@@ -26,10 +26,10 @@ export async function getCurrentWeather(lat, lon) {
 }
 
 /**
- * Získá 5denní předpověď počasí
- * @param {number} lat - Zeměpisná šířka
- * @param {number} lon - Zeměpisná délka
- * @returns {Promise<Object>} Předpověď počasí
+ * Gets 5-day weather forecast
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @returns {Promise<Object>} Weather forecast
  */
 export async function getWeatherForecast(lat, lon) {
   try {
@@ -50,9 +50,9 @@ export async function getWeatherForecast(lat, lon) {
 }
 
 /**
- * Získá souřadnice pro zadané město nebo adresu
- * @param {string} cityName - Název města nebo adresa (např. "Václavské náměstí 1, Praha")
- * @returns {Promise<Object>} Souřadnice města
+ * Gets coordinates for given city or address
+ * @param {string} cityName - City name or address (e.g. "Václavské náměstí 1, Praha")
+ * @returns {Promise<Object>} City coordinates
  */
 export async function getCoordinatesByCity(cityName) {
   try {
@@ -67,7 +67,7 @@ export async function getCoordinatesByCity(cityName) {
     const data = await response.json();
 
     if (data.length === 0) {
-      throw new Error('Město nenalezeno');
+      throw new Error('City not found');
     }
 
     return {
@@ -83,10 +83,10 @@ export async function getCoordinatesByCity(cityName) {
 }
 
 /**
- * Vyhledá města podle názvu (pro autocomplete)
- * @param {string} query - Hledaný text
- * @param {number} limit - Max počet výsledků (default 5)
- * @returns {Promise<Array>} Pole měst
+ * Searches cities by name (for autocomplete)
+ * @param {string} query - Search text
+ * @param {number} limit - Max number of results (default 5)
+ * @returns {Promise<Array>} Array of cities
  */
 export async function searchCities(query, limit = 5) {
   if (!query || query.length < 2) {
@@ -108,7 +108,7 @@ export async function searchCities(query, limit = 5) {
       const cityName = item.local_names?.cs || item.name;
       const country = item.country;
 
-      // Vytvoříme displayName - preferujeme PSČ, pokud není, zobrazíme jen město + země
+      // Create displayName - prefer postal code, if not available, show just city + country
       let displayName = `${cityName}, ${country}`;
 
       return {
@@ -127,37 +127,37 @@ export async function searchCities(query, limit = 5) {
 }
 
 /**
- * Vypočítá průměrné sluneční hodiny z dat o počasí
- * @param {Object} weatherData - Data z weather API
- * @returns {number} Odhadované sluneční hodiny
+ * Calculates average sun hours from weather data
+ * @param {Object} weatherData - Data from weather API
+ * @returns {number} Estimated sun hours
  */
 export function calculateSunHours(weatherData) {
-  // Oblačnost v procentech (0-100)
+  // Cloudiness in percent (0-100)
   const cloudiness = weatherData.clouds?.all || 0;
 
-  // Základní sluneční hodiny podle období (zjednodušený výpočet)
+  // Base sun hours by season (simplified calculation)
   const now = new Date();
   const month = now.getMonth(); // 0-11
 
-  // Průměrné sluneční hodiny podle měsíce (pro střední Evropu)
+  // Average sun hours by month (for Central Europe)
   const avgSunHoursByMonth = [2, 3, 4, 6, 7, 8, 8, 7, 5, 4, 2, 2];
   const baseSunHours = avgSunHoursByMonth[month];
 
-  // Snížení podle oblačnosti (čím více mraků, tím méně slunce)
+  // Reduction based on cloudiness (more clouds, less sun)
   const sunHours = baseSunHours * (1 - cloudiness / 100) + (cloudiness / 100) * 1;
 
-  return Math.max(1, Math.min(12, sunHours)); // Omezeníme mezi 1-12 hodinami
+  return Math.max(1, Math.min(12, sunHours)); // Limit between 1-12 hours
 }
 
 /**
- * Vytvoří 5denní predikci slunečních hodin z předpovědi počasí
- * @param {Object} forecastData - Data z forecast API
- * @returns {Array<Object>} Pole objektů s daty pro každý den {date, dayLabel, sunHours}
+ * Creates 5-day sun hours prediction from weather forecast
+ * @param {Object} forecastData - Data from forecast API
+ * @returns {Array<Object>} Array of objects with data for each day {date, dayLabel, sunHours}
  */
 export function extractSunHoursFromForecast(forecastData) {
   const dailyData = {};
 
-  // Forecast API vrací data po 3 hodinách, potřebujeme seskupit podle dnů
+  // Forecast API returns data every 3 hours, we need to group by days
   forecastData.list.forEach(item => {
     const date = new Date(item.dt * 1000);
     const dateKey = date.toLocaleDateString('cs-CZ');
@@ -172,7 +172,7 @@ export function extractSunHoursFromForecast(forecastData) {
     dailyData[dateKey].items.push(item);
   });
 
-  // Zpracujeme pouze prvních 5 dní (OpenWeatherMap free tier limit)
+  // Process only first 5 days (OpenWeatherMap free tier limit)
   const result = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -188,7 +188,7 @@ export function extractSunHoursFromForecast(forecastData) {
 
     const sunHours = baseSunHours * (1 - avgCloudiness / 100) + (avgCloudiness / 100) * 1;
 
-    // Vytvoříme popisek dne
+    // Create day label
     let dayLabel;
     const dayOfWeek = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'][date.getDay()];
     const dayMonth = `${date.getDate()}.${date.getMonth() + 1}.`;

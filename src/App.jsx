@@ -21,7 +21,7 @@ function App() {
 
   const handleTrainAndPredict = async () => {
     if (!forecastRawData || !locationInfo) {
-      alert('Nejprve vypočítejte predikci energie pomocí formuláře');
+      alert('First calculate energy prediction using the form');
       return;
     }
 
@@ -29,7 +29,7 @@ function App() {
     setTrainingProgress(null);
 
     try {
-      // Trénování modelu s progress callbackem a reálnými historickými daty
+      // Train model with progress callback and real historical data
       const model = await createAndTrainModel(
         locationInfo.lat,
         locationInfo.lon,
@@ -40,14 +40,14 @@ function App() {
 
       setAiModel(model);
 
-      // Vytvoření AI predikce
+      // Create AI prediction
       const prediction = createAIPrediction(model, forecastRawData);
       setAiPrediction(prediction);
 
       setTrainingProgress(null);
     } catch (err) {
       console.error('Error training AI model:', err);
-      setError('Nepodařilo se natrénovat AI model: ' + err.message);
+      setError('Failed to train AI model: ' + err.message);
     } finally {
       setAiTraining(false);
     }
@@ -60,35 +60,35 @@ function App() {
     try {
       let coordinates;
 
-      // Získání souřadnic
+      // Get coordinates
       if (useGeolocation) {
-        // Souřadnice jsou už v city ve formátu "lat, lon"
+        // Coordinates are already in city in format "lat, lon"
         const [lat, lon] = city.split(',').map((coord) => parseFloat(coord.trim()));
         coordinates = { lat, lon, name: 'Vaše poloha', country: '' };
       } else {
-        // Získání souřadnic podle města
+        // Get coordinates by city name
         coordinates = await getCoordinatesByCity(city);
       }
 
       setLocationInfo(coordinates);
 
-      // Získání předpovědi počasí z Open-Meteo API (vrací už zpracovaná data)
+      // Get weather forecast from Open-Meteo API (returns processed data)
       const forecastData = await getWeatherForecast(coordinates.lat, coordinates.lon);
-      setForecastRawData(forecastData); // Uložíme pro AI predikci
+      setForecastRawData(forecastData); // Save for AI prediction
 
-      // Výpočet solárních dat s reálnými hodnotami z Open-Meteo
+      // Calculate solar data with real values from Open-Meteo
       const data = simulateSolarData(area, efficiency, orientation, forecastData);
       setSolarData(data);
 
-      // Reset AI predikce při nových datech
+      // Reset AI prediction when new data arrives
       setAiPrediction(null);
     } catch (err) {
       console.error('Error fetching weather data:', err);
       setError(
-        err.message || 'Nepodařilo se načíst data o počasí. Používám simulovaná data.'
+        err.message || 'Failed to load weather data. Using simulated data.'
       );
 
-      // Fallback na simulovaná data
+      // Fallback to simulated data
       const data = simulateSolarData(area, efficiency, orientation);
       setSolarData(data);
     } finally {

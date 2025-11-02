@@ -16,7 +16,7 @@ function SolarForm({ onSubmit, loading }) {
   const debounceTimer = useRef(null);
   const wrapperRef = useRef(null);
 
-  // Zavře suggestions při kliknutí mimo
+  // Close suggestions when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
@@ -64,7 +64,7 @@ function SolarForm({ onSubmit, loading }) {
     setUseGeolocation(false);
     setSelectedSuggestion(null);
 
-    // Debounce pro API volání
+    // Debounce for API calls
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
@@ -94,19 +94,19 @@ function SolarForm({ onSubmit, loading }) {
     const areaNum = parseFloat(area);
     const efficiencyNum = parseFloat(efficiency);
 
-    // Validace
+    // Validation
     if (isNaN(areaNum) || areaNum <= 0) {
-      alert('Zadejte platnou plochu panelu (větší než 0)');
+      alert('Enter valid panel area (greater than 0)');
       return;
     }
 
     if (isNaN(efficiencyNum) || efficiencyNum < 0 || efficiencyNum > 1) {
-      alert('Zadejte platnou účinnost (0-1)');
+      alert('Enter valid efficiency (0-1)');
       return;
     }
 
     if (!city.trim()) {
-      alert('Zadejte město nebo použijte geolokaci');
+      alert('Enter city or use geolocation');
       return;
     }
 

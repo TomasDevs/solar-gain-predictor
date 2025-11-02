@@ -2,50 +2,50 @@ import * as tf from '@tensorflow/tfjs';
 import { getHistoricalWeather } from './openMeteoService';
 
 /**
- * Vytvoří a natrénuje neuronovou síť pro predikci slunečních hodin
- * @param {number} lat - Zeměpisná šířka
- * @param {number} lon - Zeměpisná délka
- * @param {Function} onProgress - Callback funkce pro sledování průběhu tréninku
- * @returns {Promise<tf.Sequential>} Natrénovaný model
+ * Creates and trains a neural network for sun hours prediction
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @param {Function} onProgress - Callback function for training progress tracking
+ * @returns {Promise<tf.Sequential>} Trained model
  */
 export async function createAndTrainModel(lat, lon, onProgress = null) {
-  // Získáme REÁLNÁ historická data z Open-Meteo API (180 dní = 6 měsíců)
+  // Get REAL historical data from Open-Meteo API (180 days = 6 months)
   const historicalData = await getHistoricalWeather(lat, lon, 180);
 
-  // Připravíme trénovací data
-  // Vstupy: [měsíc (0-11), den v roce (0-365), oblačnost (0-100), teplota (-20 až 40)]
-  // Výstup: [sluneční hodiny (0-24h z reálných dat)]
+  // Prepare training data
+  // Inputs: [month (0-11), day of year (0-365), cloudiness (0-100), temperature (-20 to 40)]
+  // Output: [sun hours (0-24h from real data)]
   const inputs = historicalData.map(d => [
-    d.month / 11,           // Normalizace měsíce na 0-1
-    d.dayOfYear / 365,      // Normalizace dne v roce na 0-1
-    d.cloudiness / 100,     // Normalizace oblačnosti na 0-1
-    (d.temperature + 20) / 60, // Normalizace teploty na 0-1 (rozsah -20 až 40°C)
+    d.month / 11,           // Normalize month to 0-1
+    d.dayOfYear / 365,      // Normalize day of year to 0-1
+    d.cloudiness / 100,     // Normalize cloudiness to 0-1
+    (d.temperature + 20) / 60, // Normalize temperature to 0-1 (range -20 to 40°C)
   ]);
 
-  const outputs = historicalData.map(d => [d.sunHours / 24]); // Normalizace na 0-1 (0-24h)
+  const outputs = historicalData.map(d => [d.sunHours / 24]); // Normalize to 0-1 (0-24h)
 
-  // Převedeme na tensory
+  // Convert to tensors
   const inputTensor = tf.tensor2d(inputs);
   const outputTensor = tf.tensor2d(outputs);
 
-  // Vytvoříme neuronovou síť
+  // Create neural network
   const model = tf.sequential({
     layers: [
       tf.layers.dense({ inputShape: [4], units: 16, activation: 'relu' }),
       tf.layers.dropout({ rate: 0.2 }),
       tf.layers.dense({ units: 8, activation: 'relu' }),
-      tf.layers.dense({ units: 1, activation: 'sigmoid' }), // sigmoid pro výstup 0-1
+      tf.layers.dense({ units: 1, activation: 'sigmoid' }), // sigmoid for 0-1 output
     ],
   });
 
-  // Kompilace modelu
+  // Compile model
   model.compile({
     optimizer: tf.train.adam(0.01),
     loss: 'meanSquaredError',
     metrics: ['mse'],
   });
 
-  // Trénování modelu
+  // Train model
   const epochs = 100;
   await model.fit(inputTensor, outputTensor, {
     epochs,
@@ -65,7 +65,7 @@ export async function createAndTrainModel(lat, lon, onProgress = null) {
     },
   });
 
-  // Uvolníme tensory
+  // Dispose tensors
   inputTensor.dispose();
   outputTensor.dispose();
 
@@ -73,10 +73,10 @@ export async function createAndTrainModel(lat, lon, onProgress = null) {
 }
 
 /**
- * Predikce slunečních hodin na základě počasí pomocí AI modelu
- * @param {tf.Sequential} model - Natrénovaný model
- * @param {Object} weatherData - Data o počasí {cloudiness, temperature, date}
- * @returns {number} Predikované sluneční hodiny
+ * Predicts sun hours based on weather using AI model
+ * @param {tf.Sequential} model - Trained model
+ * @param {Object} weatherData - Weather data {cloudiness, temperature, date}
+ * @returns {number} Predicted sun hours
  */
 export function predictSunHours(model, weatherData) {
   const { cloudiness, temperature, date } = weatherData;
@@ -84,7 +84,7 @@ export function predictSunHours(model, weatherData) {
   const month = date.getMonth();
   const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
 
-  // Normalizace vstupů (stejně jako při tréninku)
+  // Normalize inputs (same as during training)
   const input = tf.tensor2d([[
     month / 11,
     dayOfYear / 365,
@@ -92,14 +92,14 @@ export function predictSunHours(model, weatherData) {
     (temperature + 20) / 60,
   ]]);
 
-  // Predikce
+  // Prediction
   const prediction = model.predict(input);
   const normalizedValue = prediction.dataSync()[0];
 
-  // Denormalizace výstupu (z 0-1 na 0-24h, ale omezíme na 0-12h pro zobrazení)
+  // Denormalize output (from 0-1 to 0-24h, but limit to 0-12h for display)
   const sunHours = normalizedValue * 24;
 
-  // Uvolníme tensory
+  // Dispose tensors
   input.dispose();
   prediction.dispose();
 
@@ -107,17 +107,17 @@ export function predictSunHours(model, weatherData) {
 }
 
 /**
- * Vytvoří AI predikci pro 5denní předpověď
- * @param {tf.Sequential} model - Natrénovaný model
- * @param {Array} forecastData - Předpověď počasí z API
- * @returns {Array} Pole objektů s AI predikcí {dayLabel, sunHours, aiSunHours}
+ * Creates AI prediction for 5-day forecast
+ * @param {tf.Sequential} model - Trained model
+ * @param {Array} forecastData - Weather forecast from API
+ * @returns {Array} Array of objects with AI prediction {dayLabel, sunHours, aiSunHours}
  */
 export function createAIPrediction(model, forecastData) {
   return forecastData.map(dayData => {
-    // Vytvoříme objekt počasí pro predikci
+    // Create weather object for prediction
     const weatherData = {
-      cloudiness: dayData.cloudiness || 50, // Fallback pokud chybí
-      temperature: dayData.temperature || 10, // Fallback pokud chybí
+      cloudiness: dayData.cloudiness || 50, // Fallback if missing
+      temperature: dayData.temperature || 10, // Fallback if missing
       date: dayData.date || new Date(),
     };
 
@@ -125,8 +125,8 @@ export function createAIPrediction(model, forecastData) {
 
     return {
       day: dayData.dayLabel,
-      sunHours: dayData.sunHours, // Původní výpočet
-      aiSunHours: Math.round(aiSunHours * 10) / 10, // AI predikce
+      sunHours: dayData.sunHours, // Original calculation
+      aiSunHours: Math.round(aiSunHours * 10) / 10, // AI prediction
     };
   });
 }

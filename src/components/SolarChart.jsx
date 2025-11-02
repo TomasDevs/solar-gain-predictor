@@ -9,7 +9,7 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 
-// Registrace potřebných komponent Chart.js
+// Register required Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,

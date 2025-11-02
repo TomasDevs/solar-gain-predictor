@@ -1,29 +1,29 @@
 /**
- * Koeficienty pro různé orientace střechy
- * Jih = 100%, ostatní směry mají nižší efektivitu
+ * Coefficients for different roof orientations
+ * South = 100%, other directions have lower efficiency
  */
 const ORIENTATION_FACTORS = {
-  south: 1.0,      // 100% - optimální
+  south: 1.0,      // 100% - optimal
   southeast: 0.9,  // 90%
   southwest: 0.9,  // 90%
   east: 0.75,      // 75%
   west: 0.75,      // 75%
-  north: 0.5,      // 50% - nejhorší
+  north: 0.5,      // 50% - worst
 };
 
 /**
- * Vypočítá data solární energie
- * @param {number} area - Plocha panelu v m²
- * @param {number} efficiency - Účinnost (0-1)
- * @param {string} orientation - Orientace střechy (south, east, west, north, atd.)
- * @param {Array} forecastData - Pole objektů z API s {dayLabel, sunHours} nebo null pro simulaci
- * @returns {Array} Pole objektů s daty pro každý den
+ * Calculates solar energy data
+ * @param {number} area - Panel area in m²
+ * @param {number} efficiency - Efficiency (0-1)
+ * @param {string} orientation - Roof orientation (south, east, west, north, etc.)
+ * @param {Array} forecastData - Array of objects from API with {dayLabel, sunHours} or null for simulation
+ * @returns {Array} Array of objects with data for each day
  */
 export function simulateSolarData(area, efficiency, orientation = 'south', forecastData = null) {
-  // Koeficient orientace
+  // Orientation coefficient
   const orientationFactor = ORIENTATION_FACTORS[orientation] || 1.0;
 
-  // Pokud máme reálná data z API, použijeme je
+  // If we have real data from API, use it
   if (forecastData && Array.isArray(forecastData) && forecastData.length > 0) {
     return forecastData.map((dayData) => {
       const energy = area * efficiency * dayData.sunHours * orientationFactor * 1000;
@@ -38,7 +38,7 @@ export function simulateSolarData(area, efficiency, orientation = 'south', forec
     });
   }
 
-  // Fallback simulace (pokud API selže) - 5 dní
+  // Fallback simulation (if API fails) - 5 days
   const defaultSunHours = [5, 6, 7, 6, 5];
   const today = new Date();
 
@@ -71,9 +71,9 @@ export function simulateSolarData(area, efficiency, orientation = 'south', forec
 }
 
 /**
- * Získá popisek pro orientaci střechy
- * @param {string} orientation - Kód orientace
- * @returns {string} Popisek v češtině
+ * Gets label for roof orientation
+ * @param {string} orientation - Orientation code
+ * @returns {string} Label in Czech
  */
 export function getOrientationLabel(orientation) {
   const labels = {
