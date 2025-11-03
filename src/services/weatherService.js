@@ -1,6 +1,35 @@
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
+// Rate limiting for city search (10 requests per minute)
+const rateLimitMap = new Map();
+const RATE_LIMIT_MAX_REQUESTS = 10;
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+
+/**
+ * Simple rate limiter - checks if user exceeded limit
+ * @param {string} key - Unique identifier (we'll use 'global' for client-side)
+ * @returns {boolean} True if request is allowed, false if rate limited
+ */
+function checkRateLimit(key = 'global') {
+  const now = Date.now();
+  const userRequests = rateLimitMap.get(key) || [];
+
+  // Remove old requests outside the time window
+  const recentRequests = userRequests.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW_MS);
+
+  // Check if user exceeded limit
+  if (recentRequests.length >= RATE_LIMIT_MAX_REQUESTS) {
+    return false; // Rate limited
+  }
+
+  // Add current request
+  recentRequests.push(now);
+  rateLimitMap.set(key, recentRequests);
+
+  return true; // Request allowed
+}
+
 /**
  * Gets current weather for given coordinates
  * @param {number} lat - Latitude
@@ -56,6 +85,11 @@ export async function getWeatherForecast(lat, lon) {
  * @returns {Promise<Object>} City coordinates
  */
 export async function getCoordinatesByCity(cityName, language = 'cs') {
+  // Check rate limit
+  if (!checkRateLimit('geocoding')) {
+    throw new Error('Too many requests. Please wait a moment before trying again.');
+  }
+
   try {
     const response = await fetch(
       `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(cityName)}&limit=1&appid=${API_KEY}`
@@ -95,6 +129,12 @@ export async function getCoordinatesByCity(cityName, language = 'cs') {
 export async function searchCities(query, limit = 5, language = 'cs') {
   if (!query || query.length < 2) {
     return [];
+  }
+
+  // Check rate limit
+  if (!checkRateLimit('citySearch')) {
+    console.warn('Rate limit exceeded for city search. Please wait before searching again.');
+    return []; // Return empty array if rate limited
   }
 
   try {
