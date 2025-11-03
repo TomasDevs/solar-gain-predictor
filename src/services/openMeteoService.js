@@ -112,9 +112,11 @@ export async function checkDataAvailability(lat, lon) {
  * Gets 7-day weather forecast from Open-Meteo Forecast API
  * @param {number} lat - Latitude
  * @param {number} lon - Longitude
+ * @param {Function} t - Translation function
+ * @param {Function} getDayLabel - Function to get day label
  * @returns {Promise<Array>} Array of objects with forecast for each day
  */
-export async function getWeatherForecast(lat, lon) {
+export async function getWeatherForecast(lat, lon, t = null, getDayLabel = null) {
   try {
     const params = new URLSearchParams({
       latitude: lat.toFixed(4),
@@ -153,15 +155,27 @@ export async function getWeatherForecast(lat, lon) {
 
       // Create day label
       let dayLabel;
-      const dayOfWeek = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'][date.getDay()];
       const dayMonth = `${date.getDate()}.${date.getMonth() + 1}.`;
 
-      if (i === 0) {
-        dayLabel = `Dnes (${dayMonth})`;
-      } else if (i === 1) {
-        dayLabel = `Zítra (${dayMonth})`;
+      if (t && getDayLabel) {
+        // Use translated labels
+        if (i === 0) {
+          dayLabel = `${t('today')} (${dayMonth})`;
+        } else if (i === 1) {
+          dayLabel = `${t('tomorrow')} (${dayMonth})`;
+        } else {
+          dayLabel = `${getDayLabel(date.getDay())} ${dayMonth}`;
+        }
       } else {
-        dayLabel = `${dayOfWeek} ${dayMonth}`;
+        // Fallback to Czech
+        const dayOfWeek = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'][date.getDay()];
+        if (i === 0) {
+          dayLabel = `Dnes (${dayMonth})`;
+        } else if (i === 1) {
+          dayLabel = `Zítra (${dayMonth})`;
+        } else {
+          dayLabel = `${dayOfWeek} ${dayMonth}`;
+        }
       }
 
       forecastData.push({

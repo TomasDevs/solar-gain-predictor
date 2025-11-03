@@ -73,9 +73,24 @@ export function simulateSolarData(area, efficiency, orientation = 'south', forec
 /**
  * Gets label for roof orientation
  * @param {string} orientation - Orientation code
- * @returns {string} Label in Czech
+ * @param {Function} t - Translation function (optional)
+ * @returns {string} Label
  */
-export function getOrientationLabel(orientation) {
+export function getOrientationLabel(orientation, t = null) {
+  if (t) {
+    // Use translation keys
+    const translationKeys = {
+      south: 'orientationLabelSouth',
+      southeast: 'orientationLabelSoutheast',
+      southwest: 'orientationLabelSouthwest',
+      east: 'orientationLabelEast',
+      west: 'orientationLabelWest',
+      north: 'orientationLabelNorth',
+    };
+    return t(translationKeys[orientation]) || orientation;
+  }
+
+  // Fallback to Czech
   const labels = {
     south: 'Jih',
     southeast: 'Jihovýchod',

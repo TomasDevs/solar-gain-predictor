@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SolarForm from './components/SolarForm';
 import SolarChart from './components/SolarChart';
 import { simulateSolarData, getOrientationLabel } from './data/simulateSolarData';
@@ -7,9 +7,16 @@ import {
 } from './services/weatherService';
 import { getWeatherForecast } from './services/openMeteoService';
 import { createAndTrainModel, createAIPrediction } from './services/aiModel';
+import { useTranslation } from './i18n/LanguageContext';
 
 function App() {
+  const { t, language, setLanguage, getDayLabel } = useTranslation();
   const [solarData, setSolarData] = useState([]);
+
+  // Update page title when language changes
+  useEffect(() => {
+    document.title = `${t('appTitle')} - ${language === 'cs' ? 'Predikce solární energie' : 'Solar Energy Prediction'}`;
+  }, [language, t]);
   const [loading, setLoading] = useState(false);
   const [locationInfo, setLocationInfo] = useState(null);
   const [error, setError] = useState(null);
@@ -21,7 +28,7 @@ function App() {
 
   const handleTrainAndPredict = async () => {
     if (!forecastRawData || !locationInfo) {
-      alert('First calculate energy prediction using the form');
+      alert(t('alertTrainFirst'));
       return;
     }
 
@@ -47,7 +54,7 @@ function App() {
       setTrainingProgress(null);
     } catch (err) {
       console.error('Error training AI model:', err);
-      setError('Failed to train AI model: ' + err.message);
+      setError(t('errorTrainingModel') + ': ' + err.message);
     } finally {
       setAiTraining(false);
     }
@@ -64,16 +71,16 @@ function App() {
       if (useGeolocation) {
         // Coordinates are already in city in format "lat, lon"
         const [lat, lon] = city.split(',').map((coord) => parseFloat(coord.trim()));
-        coordinates = { lat, lon, name: 'Vaše poloha', country: '' };
+        coordinates = { lat, lon, name: t('yourLocation'), country: '' };
       } else {
         // Get coordinates by city name
-        coordinates = await getCoordinatesByCity(city);
+        coordinates = await getCoordinatesByCity(city, language);
       }
 
       setLocationInfo(coordinates);
 
       // Get weather forecast from Open-Meteo API (returns processed data)
-      const forecastData = await getWeatherForecast(coordinates.lat, coordinates.lon);
+      const forecastData = await getWeatherForecast(coordinates.lat, coordinates.lon, t, getDayLabel);
       setForecastRawData(forecastData); // Save for AI prediction
 
       // Calculate solar data with real values from Open-Meteo
@@ -85,7 +92,7 @@ function App() {
     } catch (err) {
       console.error('Error fetching weather data:', err);
       setError(
-        err.message || 'Failed to load weather data. Using simulated data.'
+        err.message || t('errorFetchingData')
       );
 
       // Fallback to simulated data
@@ -101,6 +108,32 @@ function App() {
       <div className="max-w-7xl mx-auto">
         {/* Hlavička */}
         <header className="text-center mb-6 sm:mb-10 pt-4">
+          {/* Language Switcher */}
+          <div className="flex justify-end mb-4">
+            <div className="inline-flex items-center bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-slate-200 p-1">
+              <button
+                onClick={() => setLanguage('cs')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  language === 'cs'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-blue-600'
+                }`}
+              >
+                CZ
+              </button>
+              <button
+                onClick={() => setLanguage('en')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  language === 'en'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-blue-600'
+                }`}
+              >
+                EN
+              </button>
+            </div>
+          </div>
+
           <div className="inline-flex items-center justify-center mb-4">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/30 transform hover:scale-105 transition-transform">
               <svg className="w-7 h-7 sm:w-9 sm:h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,10 +142,10 @@ function App() {
             </div>
           </div>
           <h1 className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
-            Solar Gain Predictor
+            {t('appTitle')}
           </h1>
           <p className="text-slate-600 text-sm sm:text-lg max-w-2xl mx-auto px-4">
-            Predikce výroby solární energie na základě reálných dat o počasí s AI technologií
+            {t('appSubtitle')}
           </p>
         </header>
 
@@ -129,7 +162,7 @@ function App() {
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-amber-800 text-sm sm:text-base">Upozornění</p>
+                <p className="font-semibold text-amber-800 text-sm sm:text-base">{t('warning')}</p>
                 <p className="text-amber-700 text-sm mt-1">{error}</p>
               </div>
             </div>
@@ -154,7 +187,7 @@ function App() {
                   {locationInfo.country && `, ${locationInfo.country}`}
                 </p>
                 <p className="text-blue-700 text-xs sm:text-sm mt-1">
-                  Orientace: <span className="font-medium">{getOrientationLabel(solarData[0]?.orientation)}</span> ({Math.round(solarData[0]?.orientationFactor * 100)}% efektivity)
+                  {t('orientation')}: <span className="font-medium">{getOrientationLabel(solarData[0]?.orientation, t)}</span> ({Math.round(solarData[0]?.orientationFactor * 100)}% {t('efficiency')})
                 </p>
               </div>
             </div>
@@ -171,7 +204,7 @@ function App() {
               <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              Statistiky výroby
+              {t('statsTitle')}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 sm:p-5 border border-blue-100">
@@ -181,7 +214,7 @@ function App() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
                   </div>
-                  <p className="text-slate-600 text-xs sm:text-sm font-medium">Celková energie</p>
+                  <p className="text-slate-600 text-xs sm:text-sm font-medium">{t('totalEnergy')}</p>
                 </div>
                 <p className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1">
                   {(solarData.reduce((sum, d) => sum + d.energy, 0) / 1000).toFixed(2)}
@@ -198,7 +231,7 @@ function App() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                     </svg>
                   </div>
-                  <p className="text-slate-600 text-xs sm:text-sm font-medium">Průměr/den</p>
+                  <p className="text-slate-600 text-xs sm:text-sm font-medium">{t('averagePerDay')}</p>
                 </div>
                 <p className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1">
                   {(solarData.reduce((sum, d) => sum + d.energy, 0) / solarData.length / 1000).toFixed(2)}
@@ -215,7 +248,7 @@ function App() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                     </svg>
                   </div>
-                  <p className="text-slate-600 text-xs sm:text-sm font-medium">Maximum</p>
+                  <p className="text-slate-600 text-xs sm:text-sm font-medium">{t('maximum')}</p>
                 </div>
                 <p className="text-2xl sm:text-3xl font-bold text-amber-600 mb-1">
                   {(Math.max(...solarData.map((d) => d.energy)) / 1000).toFixed(2)}
@@ -239,7 +272,7 @@ function App() {
                 </svg>
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-slate-800">
-                AI Predikce slunečních hodin
+                {t('aiTitle')}
               </h3>
             </div>
 
@@ -252,7 +285,7 @@ function App() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                {aiTraining ? 'Trénuji model...' : aiModel ? 'Přetrénovat & Predikovat' : 'Natrénovat & Predikovat'}
+                {aiTraining ? t('trainingButton') : aiModel ? t('retrainButton') : t('trainButton')}
               </button>
             </div>
 
@@ -262,7 +295,7 @@ function App() {
                   <svg className="w-5 h-5 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Trénování modelu: Epoch {trainingProgress.epoch}/{trainingProgress.totalEpochs}
+                  {t('trainingModel')}: Epoch {trainingProgress.epoch}/{trainingProgress.totalEpochs}
                 </p>
                 <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden shadow-inner">
                   <div
@@ -272,11 +305,11 @@ function App() {
                 </div>
                 <div className="mt-3 flex flex-wrap gap-3 text-xs sm:text-sm">
                   <div className="bg-white/70 rounded-lg px-3 py-1.5 border border-blue-100">
-                    <span className="text-slate-600">Loss:</span>{' '}
+                    <span className="text-slate-600">{t('loss')}:</span>{' '}
                     <span className="font-semibold text-blue-700">{trainingProgress.loss?.toFixed(4)}</span>
                   </div>
                   <div className="bg-white/70 rounded-lg px-3 py-1.5 border border-indigo-100">
-                    <span className="text-slate-600">Val Loss:</span>{' '}
+                    <span className="text-slate-600">{t('valLoss')}:</span>{' '}
                     <span className="font-semibold text-indigo-700">{trainingProgress.valLoss?.toFixed(4)}</span>
                   </div>
                 </div>
@@ -289,23 +322,23 @@ function App() {
                   <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  Porovnání: Skutečnost vs. AI Predikce
+                  {t('comparisonTitle')}
                 </h4>
                 <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-lg">
                   <table className="min-w-full bg-white">
                     <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
                       <tr>
                         <th className="py-3 sm:py-4 px-3 sm:px-6 border-b-2 border-slate-200 text-left text-xs sm:text-sm font-bold text-slate-700">
-                          Den
+                          {t('day')}
                         </th>
                         <th className="py-3 sm:py-4 px-3 sm:px-6 border-b-2 border-slate-200 text-left text-xs sm:text-sm font-bold text-slate-700">
-                          Skutečnost
+                          {t('actual')}
                         </th>
                         <th className="py-3 sm:py-4 px-3 sm:px-6 border-b-2 border-slate-200 text-left text-xs sm:text-sm font-bold text-slate-700">
-                          AI Predikce
+                          {t('aiPrediction')}
                         </th>
                         <th className="py-3 sm:py-4 px-3 sm:px-6 border-b-2 border-slate-200 text-left text-xs sm:text-sm font-bold text-slate-700">
-                          Rozdíl
+                          {t('difference')}
                         </th>
                       </tr>
                     </thead>
@@ -351,8 +384,7 @@ function App() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p className="text-xs sm:text-sm text-purple-800">
-                      AI model natrénovaný na 180 dnech historických dat (6 měsíců) predikuje sluneční hodiny na základě
-                      naučených vzorců z minulosti. Porovnává se s aktuální předpovědí z Open-Meteo API pro <span className="font-semibold">{locationInfo?.name}</span>.
+                      {t('aiInfo')} <span className="font-semibold">{locationInfo?.name}</span>.
                     </p>
                   </div>
                 </div>
@@ -366,9 +398,7 @@ function App() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <p className="text-sm sm:text-base text-slate-600">
-                    Klikněte na tlačítko výše pro natrénování AI modelu a zobrazení predikce.
-                    Model se trénuje na reálných historických datech (180 dní) a porovnává naučené vzorce s aktuální předpovědí.
-                    Obojí z Open-Meteo API.
+                    {t('aiDescription')}
                   </p>
                 </div>
               </div>

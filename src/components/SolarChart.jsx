@@ -8,6 +8,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import { useTranslation } from '../i18n/LanguageContext';
 
 // Register required Chart.js components
 ChartJS.register(
@@ -20,6 +21,8 @@ ChartJS.register(
 );
 
 function SolarChart({ data }) {
+  const { t } = useTranslation();
+
   if (!data || data.length === 0) {
     return (
       <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-3xl px-4 sm:px-8 pt-8 pb-8 text-center border border-slate-200">
@@ -29,7 +32,7 @@ function SolarChart({ data }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <p className="text-slate-500 text-sm sm:text-base">Zatím žádná data. Vyplňte formulář a vypočítejte energii.</p>
+          <p className="text-slate-500 text-sm sm:text-base">{t('chartEmpty')}</p>
         </div>
       </div>
     );
@@ -39,7 +42,7 @@ function SolarChart({ data }) {
     labels: data.map((d) => d.day),
     datasets: [
       {
-        label: 'Vyrobená energie (Wh)',
+        label: t('energyLabel'),
         data: data.map((d) => d.energy),
         backgroundColor: (context) => {
           const ctx = context.chart.ctx;
@@ -75,7 +78,7 @@ function SolarChart({ data }) {
       },
       title: {
         display: true,
-        text: '📊 Predikce solární energie na 5 dní',
+        text: t('chartTitle'),
         font: {
           size: 18,
           weight: 'bold',
@@ -98,10 +101,10 @@ function SolarChart({ data }) {
         callbacks: {
           afterLabel: function (context) {
             const dataPoint = data[context.dataIndex];
-            return `Sluneční hodiny: ${dataPoint.sunHours}h`;
+            return `${t('sunHours')}: ${dataPoint.sunHours}h`;
           },
           label: function (context) {
-            return `Energie: ${context.parsed.y.toLocaleString()} Wh (${(context.parsed.y / 1000).toFixed(2)} kWh)`;
+            return `${t('energyLabel')}: ${context.parsed.y.toLocaleString()} Wh (${(context.parsed.y / 1000).toFixed(2)} kWh)`;
           },
         },
       },
@@ -122,7 +125,7 @@ function SolarChart({ data }) {
         },
         title: {
           display: true,
-          text: 'Energie (Wh)',
+          text: t('energyAxis'),
           color: '#475569',
           font: {
             size: 12,

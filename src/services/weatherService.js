@@ -52,9 +52,10 @@ export async function getWeatherForecast(lat, lon) {
 /**
  * Gets coordinates for given city or address
  * @param {string} cityName - City name or address (e.g. "Václavské náměstí 1, Praha")
+ * @param {string} language - Language code (cs/en)
  * @returns {Promise<Object>} City coordinates
  */
-export async function getCoordinatesByCity(cityName) {
+export async function getCoordinatesByCity(cityName, language = 'cs') {
   try {
     const response = await fetch(
       `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(cityName)}&limit=1&appid=${API_KEY}`
@@ -73,7 +74,9 @@ export async function getCoordinatesByCity(cityName) {
     return {
       lat: data[0].lat,
       lon: data[0].lon,
-      name: data[0].local_names?.cs || data[0].name,
+      name: language === 'cs'
+        ? (data[0].local_names?.cs || data[0].name)
+        : (data[0].local_names?.en || data[0].name),
       country: data[0].country
     };
   } catch (error) {
@@ -86,9 +89,10 @@ export async function getCoordinatesByCity(cityName) {
  * Searches cities by name (for autocomplete)
  * @param {string} query - Search text
  * @param {number} limit - Max number of results (default 5)
+ * @param {string} language - Language code (cs/en)
  * @returns {Promise<Array>} Array of cities
  */
-export async function searchCities(query, limit = 5) {
+export async function searchCities(query, limit = 5, language = 'cs') {
   if (!query || query.length < 2) {
     return [];
   }
@@ -105,7 +109,10 @@ export async function searchCities(query, limit = 5) {
     const data = await response.json();
 
     return data.map(item => {
-      const cityName = item.local_names?.cs || item.name;
+      // Use localized name based on language, fallback to English name
+      const cityName = language === 'cs'
+        ? (item.local_names?.cs || item.name)
+        : (item.local_names?.en || item.name);
       const country = item.country;
 
       // Create displayName - prefer postal code, if not available, show just city + country

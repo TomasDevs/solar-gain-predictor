@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { searchCities } from '../services/weatherService';
+import { useTranslation } from '../i18n/LanguageContext';
 
 function SolarForm({ onSubmit, loading }) {
+  const { t, language } = useTranslation();
   const [area, setArea] = useState('10');
   const [efficiency, setEfficiency] = useState('0.2');
   const [orientation, setOrientation] = useState('south');
@@ -45,7 +47,7 @@ function SolarForm({ onSubmit, loading }) {
         setCity(coords);
         setShowSuggestions(false);
         setSelectedSuggestion({
-          displayName: `Vaše poloha (${coords})`,
+          displayName: `${t('yourLocation')} (${coords})`,
           lat: position.coords.latitude,
           lon: position.coords.longitude
         });
@@ -71,7 +73,7 @@ function SolarForm({ onSubmit, loading }) {
 
     if (value.length >= 2) {
       debounceTimer.current = setTimeout(async () => {
-        const results = await searchCities(value);
+        const results = await searchCities(value, 5, language);
         setSuggestions(results);
         setShowSuggestions(results.length > 0);
       }, 300); // 300ms debounce
@@ -96,17 +98,17 @@ function SolarForm({ onSubmit, loading }) {
 
     // Validation
     if (isNaN(areaNum) || areaNum <= 0) {
-      alert('Enter valid panel area (greater than 0)');
+      alert(t('alertAreaInvalid'));
       return;
     }
 
     if (isNaN(efficiencyNum) || efficiencyNum < 0 || efficiencyNum > 1) {
-      alert('Enter valid efficiency (0-1)');
+      alert(t('alertEfficiencyInvalid'));
       return;
     }
 
     if (!city.trim()) {
-      alert('Enter city or use geolocation');
+      alert(t('alertCityRequired'));
       return;
     }
 
@@ -125,7 +127,7 @@ function SolarForm({ onSubmit, loading }) {
         <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
         </svg>
-        Parametry solárního panelu
+        {t('formTitle')}
       </h2>
 
       {/* Lokace s autocomplete */}
@@ -136,7 +138,7 @@ function SolarForm({ onSubmit, loading }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Město nebo obec
+            {t('cityLabel')}
           </div>
         </label>
         <div className="flex flex-col sm:flex-row gap-2">
@@ -148,7 +150,7 @@ function SolarForm({ onSubmit, loading }) {
               onChange={handleCityChange}
               onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
               className="shadow-sm border-2 border-slate-200 rounded-xl w-full py-2.5 px-4 text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              placeholder="např. Praha, Brno, Ostrava"
+              placeholder={t('cityPlaceholder')}
               disabled={geoLoading}
               autoComplete="off"
             />
@@ -185,18 +187,18 @@ function SolarForm({ onSubmit, loading }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            {geoLoading ? 'Načítám...' : 'Moje poloha'}
+            {geoLoading ? t('loading') : t('myLocation')}
           </button>
         </div>
         <p className="text-slate-500 text-xs mt-2">
-          Začněte psát město, zobrazí se návrhy. Nebo použijte geolokaci.
+          {t('cityHint')}
         </p>
         {selectedSuggestion && (
           <div className="mt-2 inline-flex items-center gap-1.5 bg-green-50 text-green-700 text-xs px-3 py-1.5 rounded-lg border border-green-200">
             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
-            Vybráno: {selectedSuggestion.displayName}
+            {t('selected')}: {selectedSuggestion.displayName}
           </div>
         )}
       </div>
@@ -209,7 +211,7 @@ function SolarForm({ onSubmit, loading }) {
               <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
               </svg>
-              Plocha panelu (m²)
+              {t('panelAreaLabel')}
             </div>
           </label>
           <input
@@ -220,7 +222,7 @@ function SolarForm({ onSubmit, loading }) {
             value={area}
             onChange={(e) => setArea(e.target.value)}
             className="shadow-sm border-2 border-slate-200 rounded-xl w-full py-2.5 px-4 text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-            placeholder="např. 10"
+            placeholder={t('panelAreaPlaceholder')}
           />
         </div>
 
@@ -231,7 +233,7 @@ function SolarForm({ onSubmit, loading }) {
               <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              Účinnost (0-1)
+              {t('efficiencyLabel')}
             </div>
           </label>
           <input
@@ -243,9 +245,9 @@ function SolarForm({ onSubmit, loading }) {
             value={efficiency}
             onChange={(e) => setEfficiency(e.target.value)}
             className="shadow-sm border-2 border-slate-200 rounded-xl w-full py-2.5 px-4 text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-            placeholder="např. 0.2"
+            placeholder={t('efficiencyPlaceholder')}
           />
-          <p className="text-slate-500 text-xs mt-1.5">Typická hodnota: 0.15-0.22</p>
+          <p className="text-slate-500 text-xs mt-1.5">{t('efficiencyHint')}</p>
         </div>
       </div>
 
@@ -256,7 +258,7 @@ function SolarForm({ onSubmit, loading }) {
             <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
             </svg>
-            Orientace střechy
+            {t('orientationLabel')}
           </div>
         </label>
         <select
@@ -265,18 +267,18 @@ function SolarForm({ onSubmit, loading }) {
           onChange={(e) => setOrientation(e.target.value)}
           className="shadow-sm border-2 border-slate-200 rounded-xl w-full py-2.5 px-4 text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer transition-all"
         >
-          <option value="south">🧭 Jih (optimální - 100%)</option>
-          <option value="southeast">↘️ Jihovýchod (90%)</option>
-          <option value="southwest">↙️ Jihozápad (90%)</option>
-          <option value="east">→ Východ (75%)</option>
-          <option value="west">← Západ (75%)</option>
-          <option value="north">⬆️ Sever (50%)</option>
+          <option value="south">🧭 {t('orientationSouth')}</option>
+          <option value="southeast">↘️ {t('orientationSoutheast')}</option>
+          <option value="southwest">↙️ {t('orientationSouthwest')}</option>
+          <option value="east">→ {t('orientationEast')}</option>
+          <option value="west">← {t('orientationWest')}</option>
+          <option value="north">⬆️ {t('orientationNorth')}</option>
         </select>
         <p className="text-slate-500 text-xs mt-1.5 flex items-center gap-1">
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Jižní orientace poskytuje nejvyšší výkon
+          {t('orientationHint')}
         </p>
       </div>
 
@@ -289,7 +291,7 @@ function SolarForm({ onSubmit, loading }) {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
           </svg>
-          {loading ? 'Načítám data...' : 'Vypočítat energii'}
+          {loading ? t('calculatingButton') : t('calculateButton')}
         </button>
       </div>
     </form>
